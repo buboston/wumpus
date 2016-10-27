@@ -8,13 +8,15 @@ public class Game {
 	public static void main(String[] args)  throws IOException {
 
 		String[] file_content = loadInputFile();
-		Board board = new Board(file_content);		
+		Board board = new Board(file_content);
+		board.Start(); // Start the game
 	}
 	
 	public static String[] loadInputFile() throws IOException{
 	    Scanner sys_scanner = new Scanner(System.in);
-		System.out.print("Enter input file name: ");
-		String file_name = sys_scanner.next();
+		//System.out.print("Enter input file name: ");
+		//String file_name = sys_scanner.next();
+		String file_name ="input.txt";
 		sys_scanner.close();
 		    
 		File in_file = new File (file_name);
