@@ -56,7 +56,7 @@ public class Board {
 		for (int i = 0; i < dim_x; i++) {
 			for (int j = 0; j < dim_y; j++) {
 				grid[i][j] = ""; // initialize master list
-				cells[i][j] = new Cell(i, j, this); // grid Cell
+				cells[i][j] = new Cell(i, j); // grid Cell
 			}
 		}
 
@@ -85,8 +85,95 @@ public class Board {
 			}
 		}
 		currentCell = startingCell = cells[x][y];
+		
 		currentCell.IsSafe  = true;
 		//currentCell.IsExpored = true;
+	}
+	
+	public void observeConditions(Cell cell)
+	{
+		Integer pos_x = cell.x;
+		Integer pos_y = cell.y;
+		
+		if(cell.IsExplored == false){
+			cell.IsExplored = true;
+			cell.IsSafe = true;
+			cell.IsFrientier = false;
+			for (Cell adj_cell : AdjecentCells(cell)) {
+				if ( adj_cell.IsExplored == false){
+					adj_cell.IsFrientier = true;
+						
+				}
+			}
+			
+			// If Empty
+			if ( IsEmpty(pos_x, pos_y))
+			{
+				for (Cell adj_cell : AdjecentCells(cell)) {
+					if ( adj_cell.IsExplored == false)
+					{
+						adj_cell.IsSafe = true;
+						adj_cell.IsFrientier = true;
+					}
+				}
+				
+			}
+			
+			//Breezy
+			if(isBreezy(pos_x, pos_y))
+			{	
+				cell.IsBreezy = true;
+				for (Cell adj_cell : AdjecentCells(cell)) {
+					if ( adj_cell.IsExplored == false)
+					{
+						adj_cell.PitThreatCount += 1;
+					}
+				}
+			}
+			
+			if(isStench(pos_x, pos_y))
+			{	
+				cell.IsSmelly = true;
+				
+				for (Cell adj_cell : AdjecentCells(cell)) {
+					adj_cell.WampusThreatCount += 1;
+					
+					if(adj_cell.WampusThreatCount == 2) {
+						adj_cell.IsWampus = true;
+						for (int x = 0; x < dim_x; x++) {
+							for(int y = 0; y < dim_y; y++) {
+								cells[x][y].WampusThreatCount = 0;
+							}
+						}
+						break;
+					}
+				}
+			}
+		}
+	}
+	
+	public ArrayList<Cell> AdjecentCells(Cell cell) {
+		
+	
+		ArrayList<Cell> adjacent_cell_list = new ArrayList<Cell>();
+				
+		if(cell.x != 0){
+			adjacent_cell_list.add(cells[cell.x - 1][cell.y]);
+		}
+		
+		if(cell.x != dim_x-1){
+			adjacent_cell_list.add(cells[cell.x + 1][cell.y]);
+		}
+		
+		if(cell.y != 0){
+			adjacent_cell_list.add(cells[cell.x][cell.y - 1]);
+		}
+		
+		if(cell.y != dim_y-1){
+			adjacent_cell_list.add(cells[cell.x][cell.y + 1]);
+		}
+		
+		return adjacent_cell_list;
 	}
 	
 	public void Start()
@@ -101,6 +188,7 @@ public class Board {
 		while ( !st.isEmpty())
 		{
 			Cell t = st.pop();
+			observeConditions(t);
 			System.out.println("X=> " + t.x + ", Y ==> " + t.y);
 				
 			// if it has already been explored, then move on.
@@ -114,28 +202,28 @@ public class Board {
 			//Step 1: Cell X -1, Y
 			if (t.x > 0 ) {
 				tc1 =cells[t.x-1][t.y];
-				if ( tc1.IsSafe  && tc1.IsExpored == false) 
+				if ( tc1.IsSafe  && tc1.IsExplored == false) 
 					st.push(tc1);
 			}
 			
 			//Step 2: Cell X + 1, Y
 			if (t.x < dim_x - 1){
-				tc1 =cells[t.x+1][t.y];
-				if ( tc1.IsSafe && tc1.IsExpored ==false)
+				tc1 = cells[t.x+1][t.y];
+				if ( tc1.IsSafe && tc1.IsExplored == false)
 					st.push(tc1);
 			}
 			
 			// Step 3: X, Y-1
 			if ( t.y > 0 ) {
 				tc1 = cells[t.x][t.y-1];
-				if (tc1.IsSafe && tc1.IsExpored == false)
+				if (tc1.IsSafe && tc1.IsExplored == false)
 				st.push(tc1);
 			}
 			
 			//Step 4: X, Y + 1 
 			if ( t.y < dim_y - 1){
 				tc1 = cells[t.x][t.y+1];
-				if (tc1.IsSafe && tc1.IsExpored == false)
+				if (tc1.IsSafe && tc1.IsExplored == false)
 				st.push(tc1);
 			}
 			
@@ -143,8 +231,9 @@ public class Board {
 			// Check the explored and build the logic here
 			//****************************************************
 			
+			
 			// Hardcoding the values
-			t.IsExpored = true;
+			t.IsExplored = true;
 			t.IsSafe = true;
 		}
 		
@@ -153,7 +242,7 @@ public class Board {
 	//Based on currentCell, gain knowledge about adjacent cells.  
 	public Cell getNextMove() {
 		
-		currentCell.IsExpored = true;
+		currentCell.IsExplored = true;
 		currentCell.IsSafe  = true;
 		
 		// Step 1: X- 1, Y
@@ -270,6 +359,11 @@ public class Board {
 
 	public boolean isPit(int x, int y) {
 		return ( grid[x][y].contains(Board.PIT));
+	}
+	
+	public boolean IsEmpty(int x, int y)
+	{
+		return grid[x][y].isEmpty();
 	}
 
 }
