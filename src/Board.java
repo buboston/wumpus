@@ -5,6 +5,7 @@ public class Board {
 	public int x, y = 0;
 	public Cell startingCell;
 	public Cell currentCell;
+	public Cell wumpusCell=null;
 	private String grid[][]; // represents the whole Game file as RxC grid
 	private Cell[][] cells;
 
@@ -40,7 +41,7 @@ public class Board {
 		// Setup Arrays
 		grid = new String[dim_x][dim_y];
 		cells = new Cell[dim_x][dim_y];
-		
+
 		// Initialize and Load the file content into board
 		initialize(fileContent);
 	}
@@ -61,7 +62,7 @@ public class Board {
 		}
 
 		int pos_x = 0, pos_y = 0;
-		
+
 		// *******************************************************
 		// Loop thru fileContent and Set the board and each cell
 		//// *******************************************************
@@ -85,284 +86,204 @@ public class Board {
 			}
 		}
 		currentCell = startingCell = cells[x][y];
-		
-		currentCell.IsSafe  = true;
-		//currentCell.IsExpored = true;
+
+		currentCell.IsSafe = true;
+		// currentCell.IsExpored = true;
 	}
 	
-	public void observeConditions(Cell cell)
-	{
-		Integer pos_x = cell.x;
-		Integer pos_y = cell.y;
-		
-		if(cell.IsExplored == false){
-			cell.IsExplored = true;
-			cell.IsSafe = true;
-			cell.IsFrientier = false;
-			for (Cell adj_cell : AdjecentCells(cell)) {
-				if ( adj_cell.IsExplored == false){
-					adj_cell.IsFrientier = true;
-						
-				}
-			}
-			
-			// If Empty
-			if ( IsEmpty(pos_x, pos_y))
-			{
-				for (Cell adj_cell : AdjecentCells(cell)) {
-					if ( adj_cell.IsExplored == false)
-					{
-						adj_cell.IsSafe = true;
-						adj_cell.IsFrientier = true;
-					}
-				}
-				
-			}
-			
-			//Breezy
-			if(isBreezy(pos_x, pos_y))
-			{	
-				cell.IsBreezy = true;
-				for (Cell adj_cell : AdjecentCells(cell)) {
-					if ( adj_cell.IsExplored == false)
-					{
-						adj_cell.PitThreatCount += 1;
-					}
-				}
-			}
-			
-			if(isStench(pos_x, pos_y))
-			{	
-				cell.IsSmelly = true;
-				
-				for (Cell adj_cell : AdjecentCells(cell)) {
-					adj_cell.WampusThreatCount += 1;
-					
-					if(adj_cell.WampusThreatCount == 2) {
-						adj_cell.IsWampus = true;
-						for (int x = 0; x < dim_x; x++) {
-							for(int y = 0; y < dim_y; y++) {
-								cells[x][y].WampusThreatCount = 0;
-							}
-						}
-						break;
-					}
-				}
-			}
-		}
-	}
-	
-	public ArrayList<Cell> AdjecentCells(Cell cell) {
-		
-	
-		ArrayList<Cell> adjacent_cell_list = new ArrayList<Cell>();
-				
-		if(cell.x != 0){
-			adjacent_cell_list.add(cells[cell.x - 1][cell.y]);
-		}
-		
-		if(cell.x != dim_x-1){
-			adjacent_cell_list.add(cells[cell.x + 1][cell.y]);
-		}
-		
-		if(cell.y != 0){
-			adjacent_cell_list.add(cells[cell.x][cell.y - 1]);
-		}
-		
-		if(cell.y != dim_y-1){
-			adjacent_cell_list.add(cells[cell.x][cell.y + 1]);
-		}
-		
-		return adjacent_cell_list;
-	}
-	
-	public void Start()
-	{
+	public void Start() {
 
 		Cell tc1; // temporary cell
-		
+
 		Stack<Cell> st = new Stack<Cell>();
 		st.push(currentCell);
-		
+		currentCell.Display();
+
 		// Use Depth first search to process all the cells in the grid
-		while ( !st.isEmpty())
-		{
+		while (!st.isEmpty()) {
 			Cell t = st.pop();
 			observeConditions(t);
-			System.out.println("X=> " + t.x + ", Y ==> " + t.y);
-				
-			// if it has already been explored, then move on.
-			//if ( t.IsExpored) continue;
+			//System.out.println("X=> " + t.x + ", Y ==> " + t.y );
 			
+			Cell nextBestCell=null;
 			
-			//****************************************************
-			//Push Adjacent rooms to the stack
-			//****************************************************
+			for(int i=0;i < dim_x; i++)
+				for(int j=0; j< dim_y; j++)
+				{
+					Cell cell =cells[i][j]; 
+					if (cell.IsFrientier == true)
+					{
+						if ( cell.IsWumpus) 
+							continue;
+					
+						if ( nextBestCell == null)
+							nextBestCell = cell;
+						else
+						{
+							if ( nextBestCell.IsSafe)
+							{
+								if ( cell.IsSafe && Distance(t, nextBestCell) > Distance(t,cell))
+									nextBestCell = cell;
+							}
+							else
+							{
+								if ( cell.IsSafe)
+								{
+									nextBestCell=cell;
+								}
+								else
+								if (( cell.WumpusThreatCount + cell.PitThreatCount <= nextBestCell.WumpusThreatCount + nextBestCell.PitThreatCount)
+										&& Distance(t, nextBestCell) > Distance(t,cell))
+								{
+									nextBestCell= cell;
+								}
+							}
+						}
+						
+						if (!nextBestCell.IsSafe && wumpusCell !=null)
+						{
+							// Kill The Wumpus
+							
+							wumpusCell.IsWumpus=false;
+							nextBestCell=wumpusCell;
+							wumpusCell=null;
+							System.out.println("Killed the Wumpus X=>"+ nextBestCell.x +", Y=>" +nextBestCell.y);
+						}
+						
+						break;
+					}
+						
+				}
 			
-			//Step 1: Cell X -1, Y
-			if (t.x > 0 ) {
-				tc1 =cells[t.x-1][t.y];
-				if ( tc1.IsSafe  && tc1.IsExplored == false) 
-					st.push(tc1);
+			if ( nextBestCell !=null)
+			{
+			
+				st.push(nextBestCell);
 			}
-			
-			//Step 2: Cell X + 1, Y
-			if (t.x < dim_x - 1){
-				tc1 = cells[t.x+1][t.y];
-				if ( tc1.IsSafe && tc1.IsExplored == false)
-					st.push(tc1);
+		}
+
+	}
+	
+	private int Distance (Cell c1, Cell c2)
+	{	
+		return Math.abs(c1.x - c2.x) + Math.abs(c1.y-c2.y);
+	}
+
+
+	public void observeConditions(Cell cell) {
+		Integer pos_x = cell.x;
+		Integer pos_y = cell.y;
+
+		if (cell.IsExplored)
+			return; // Exit if it has already been explored
+
+		cell.IsExplored = true;
+		cell.IsSafe = true;
+		cell.IsFrientier = false;
+		for (Cell adj_cell : AdjecentCells(cell)) {
+			if (adj_cell.IsExplored == false) {
+				adj_cell.IsFrientier = true;
 			}
-			
-			// Step 3: X, Y-1
-			if ( t.y > 0 ) {
-				tc1 = cells[t.x][t.y-1];
-				if (tc1.IsSafe && tc1.IsExplored == false)
-				st.push(tc1);
+		}
+
+		// If Empty -- Condition1
+		if (IsEmpty(pos_x, pos_y)) {
+			for (Cell adj_cell : AdjecentCells(cell)) {
+				if (adj_cell.IsExplored == false) {
+					adj_cell.IsSafe = true;
+				}
 			}
-			
-			//Step 4: X, Y + 1 
-			if ( t.y < dim_y - 1){
-				tc1 = cells[t.x][t.y+1];
-				if (tc1.IsSafe && tc1.IsExplored == false)
-				st.push(tc1);
+		}
+
+		// Breezy
+		if (isBreezy(pos_x, pos_y)) {
+			cell.IsBreezy = true;
+			for (Cell adj_cell : AdjecentCells(cell)) {
+				if (adj_cell.IsExplored == false) {
+					adj_cell.PitThreatCount += 1;
+				}
 			}
-			
-			//****************************************************
-			// Check the explored and build the logic here
-			//****************************************************
-			
-			
-			// Hardcoding the values
-			t.IsExplored = true;
-			t.IsSafe = true;
+		}
+
+		// Stench : Condition 3
+		if (isStench(pos_x, pos_y)) {
+			cell.IsSmelly = true;
+
+			for (Cell adj_cell : AdjecentCells(cell)) {
+				adj_cell.WumpusThreatCount += 1;
+
+				if (adj_cell.WumpusThreatCount == 2) {
+					adj_cell.IsWumpus = true;
+					wumpusCell = adj_cell;
+							
+					for (int x = 0; x < dim_x; x++) {
+						for (int y = 0; y < dim_y; y++) {
+							cells[x][y].WumpusThreatCount = 0;
+							cells[x][y].IsSmelly=false;
+						}
+					}
+					break;
+				}
+			}
 		}
 		
-	}
-
-	//Based on currentCell, gain knowledge about adjacent cells.  
-	public Cell getNextMove() {
-		
-		currentCell.IsExplored = true;
-		currentCell.IsSafe  = true;
-		
-		// Step 1: X- 1, Y
-		if (x!=0 && cells[x-1][y].IsSafe == false)
-		{
-			if (isBreezy(x, y))
-				cells[x-1][y].IsPit = true;
-		}
-		
-		// Step 2: X+ 1, Y
-		if (x!=dim_x -1  && cells[x+1][y].IsSafe == false)
-		{
-			if (isBreezy(x, y))
-				cells[x+1][y].IsPit = true;	
-		}
-		
-		// Step 3: X, Y-1
-		if (y!=0 && cells[x][y-1].IsSafe == false)
-		{
-			if (isBreezy(x, y))
-				cells[x][y-1].IsPit = true;
-		}
-				
-				
-		// Step 4: X, Y+1 
-		if (x!=dim_y -1  && cells[x][y+1].IsSafe == false)
-		{
-			if (isBreezy(x, y))
-				cells[1][y+1].IsPit = true;
-		}
-		
-		return currentCell;
-	}
-	
-	
-	
-
-	// Right
-	public boolean MoveRight() {
-		Cell cell = currentCell;
-
-		if (cell.y + 1 < dim_y) {
-			// Move Right
-			currentCell = cells[cell.x][cell.y + 1];
-			return true;
-		}
-		return false;
-	}
-
-	// Left
-	public boolean MoveLeft() {
-		Cell cell = currentCell;
-
-		// Move Left
-		if (cell.y - 1 >= 0) {
-			// Move left
-			currentCell = cells[cell.x][cell.y - 1];
-			return true;
-		} else
-			return false;
-	}
-
-	// UP
-	public boolean MoveUp() {
-		Cell cell = currentCell;
-		// Move up
-		if (cell.x - 1 >= 0) {
-			// Move UP
-			currentCell = cells[cell.x - 1][cell.y];
-			return true;
-		} else
-			return false;
+		cell.Display();
 
 	}
 
-	// DOWN
-	public boolean MoveDown() {
-		Cell cell = currentCell;
+	public ArrayList<Cell> AdjecentCells(Cell cell) {
 
-		if (cell.x + 1 < dim_x) {
-			// Move DOwn
-			currentCell = cells[cell.x][cell.x + 1];
-			return true;
-		} else
-			return false;
+		ArrayList<Cell> adjacent_cell_list = new ArrayList<Cell>();
+
+		if (cell.x != 0) {
+			adjacent_cell_list.add(cells[cell.x - 1][cell.y]);
+		}
+
+		if (cell.x != dim_x - 1) {
+			adjacent_cell_list.add(cells[cell.x + 1][cell.y]);
+		}
+
+		if (cell.y != 0) {
+			adjacent_cell_list.add(cells[cell.x][cell.y - 1]);
+		}
+
+		if (cell.y != dim_y - 1) {
+			adjacent_cell_list.add(cells[cell.x][cell.y + 1]);
+		}
+
+		return adjacent_cell_list;
 	}
-	
-	
-	
 
+	
+	
 	public String[][] getGrid() {
 		return grid;
 	}
-	
-	
-	//*************************************************
+
+	// *************************************************
 	// ******* Setters and Getters *******************/
-	//*************************************************
+	// *************************************************
 	public boolean isBreezy(int x, int y) {
-		return ( grid[x][y].contains(Board.BREEZE));
+		return (grid[x][y].contains(Board.BREEZE));
 	}
 
 	public boolean isStench(int x, int y) {
-		return ( grid[x][y].contains(Board.STENCH));
+		return (grid[x][y].contains(Board.STENCH));
 	}
 
 	public boolean isGold(int x, int y) {
-		return ( grid[x][y].contains(Board.GOLD));
+		return (grid[x][y].contains(Board.GOLD));
 	}
-	
+
 	public boolean isWumpus(int x, int y) {
-		return ( grid[x][y].contains(Board.WUMPUS));
+		return (grid[x][y].contains(Board.WUMPUS));
 	}
 
 	public boolean isPit(int x, int y) {
-		return ( grid[x][y].contains(Board.PIT));
+		return (grid[x][y].contains(Board.PIT));
 	}
-	
-	public boolean IsEmpty(int x, int y)
-	{
+
+	public boolean IsEmpty(int x, int y) {
 		return grid[x][y].isEmpty();
 	}
 
