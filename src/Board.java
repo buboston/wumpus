@@ -8,6 +8,7 @@ public class Board {
 	public Cell wumpusCell=null;
 	private String grid[][]; // represents the whole Game file as RxC grid
 	private Cell[][] cells;
+	public int score = 0;
 
 	// Knowledge base - Keeps track items that have been explored and safe cells
 
@@ -102,17 +103,34 @@ public class Board {
 		// Use Depth first search to process all the cells in the grid
 		while (!st.isEmpty()) {
 			Cell t = st.pop();
+			t.Display();
+
+			if(isGold(t.x, t.y)){
+				score += 1000;
+				System.out.println("X=>" + t.x + " Y ==>" + t.y + " Gold Found!!!!!");
+				System.out.println("Score: " + score);
+				break;
+			}
+			
+			if(isDeadly(t.x, t.y)){
+				System.out.println("X=>" + t.x + " Y ==>" + t.y + " You are dead :(");
+				System.out.println("Score: 0 :(");
+				break;
+			}
+
 			observeConditions(t);
 			//System.out.println("X=> " + t.x + ", Y ==> " + t.y );
 			
 			Cell nextBestCell=null;
 			
 			for(int i=0;i < dim_x; i++)
+			{
 				for(int j=0; j< dim_y; j++)
 				{
-					Cell cell =cells[i][j]; 
+					Cell cell =cells[i][j];
 					if (cell.IsFrientier == true)
 					{
+						cell.Display("Considering ");
 						if ( cell.IsWumpus) 
 							continue;
 					
@@ -143,21 +161,21 @@ public class Board {
 						if (!nextBestCell.IsSafe && wumpusCell !=null)
 						{
 							// Kill The Wumpus
-							
 							wumpusCell.IsWumpus=false;
 							nextBestCell=wumpusCell;
 							wumpusCell=null;
 							System.out.println("Killed the Wumpus X=>"+ nextBestCell.x +", Y=>" +nextBestCell.y);
+							score -= 10;
+							break;
 						}
 						
-						break;
-					}
-						
+					} 
 				}
+			}
 			
 			if ( nextBestCell !=null)
 			{
-			
+				score -= Distance(t, nextBestCell);
 				st.push(nextBestCell);
 			}
 		}
@@ -194,7 +212,7 @@ public class Board {
 				}
 			}
 		}
-
+		
 		// Breezy
 		if (isBreezy(pos_x, pos_y)) {
 			cell.IsBreezy = true;
@@ -212,7 +230,7 @@ public class Board {
 			for (Cell adj_cell : AdjecentCells(cell)) {
 				adj_cell.WumpusThreatCount += 1;
 
-				if (adj_cell.WumpusThreatCount == 2) {
+				if (adj_cell.WumpusThreatCount == AdjecentCells(cell).size()) {
 					adj_cell.IsWumpus = true;
 					wumpusCell = adj_cell;
 							
@@ -227,7 +245,6 @@ public class Board {
 			}
 		}
 		
-		cell.Display();
 
 	}
 
@@ -278,6 +295,7 @@ public class Board {
 	public boolean isWumpus(int x, int y) {
 		return (grid[x][y].contains(Board.WUMPUS));
 	}
+	
 
 	public boolean isPit(int x, int y) {
 		return (grid[x][y].contains(Board.PIT));
@@ -285,6 +303,10 @@ public class Board {
 
 	public boolean IsEmpty(int x, int y) {
 		return grid[x][y].isEmpty();
+	}
+	
+	public boolean isDeadly(int x, int y){
+		return (isPit(x, y) || isWumpus(x, y));
 	}
 
 }

@@ -19,7 +19,12 @@ public class Cell {
 		y=pos_y;
 	}
 	
-	public void Display()
+	public void Display() {
+		 Display("");
+	}
+
+	
+	public void Display(String prefix)
 	{
 		String str="X=> " + x + ", Y ==> " + y +" ==> ";
 		
@@ -31,11 +36,13 @@ public class Cell {
 		if( IsWumpus) str+= "W";
 		if( IsExplored) str+= "[EX]";
 		
+		
+		
 		str+= " Wumpus Count" + WumpusThreatCount;
 		
 		str+= " Pit Count" + PitThreatCount;
 		
-		System.out.println(str);
+		System.out.println(prefix + " " + str);
 		 
 	}
 }
